@@ -1,0 +1,70 @@
+---
+Build a single HTML file `speedscan.html` — vanilla HTML + CSS + JavaScript only, no frameworks, no build tools.
+
+**Font:** Montserrat from `https://unpkg.com/@fontsource/montserrat/`
+---
+
+---
+
+Build a single HTML file `speedscan.html` — vanilla HTML + CSS + JavaScript only, no frameworks, no build tools.
+
+## **Font:** Montserrat from `https://unpkg.com/@fontsource/montserrat/`
+
+**UI — one scrollable page**
+
+Background `#f4f4f4`. Two white cards, border-radius 12px, padding 24px.
+
+**Card 1 — Setup**
+Top bar: logo "SpeedScan" left, two buttons right: "↓ Export" + "▶ Run audit" — outlined border, font-weight 500, border-radius 8px.
+Below: 2-column grid — left: API Key input, right: URLs textarea (one per line) + below that a URL list with checkboxes (add / delete / select all).
+Progress row (hidden when idle): orange text showing current URL + strategy + page count, orange progress bar + percentage, Pause + Stop buttons.
+
+**Card 2 — Results**
+Header: "Results" bold left. Right: date pill + Columns button + Filter button (outlined, border-radius 8px).
+Table columns: PAGE, DATE, MOBILE, DESKTOP, ACCESSIBILITY, BEST PRACTICES, SEO, LCP, TBT, CLS, FCP — each with ↕ sort.
+Row style: padding 15px, thin `#f5f5f5` border, no zebra. PAGE = name bold + URL small gray monospace. DATE = date + time stacked gray. Score columns (Mobile → SEO) = colored number only: green `#16a34a` ≥90, amber `#d97706` 50–89, red `#dc2626` <50. Metric columns (LCP → FCP) = plain gray `#6b7280`. Alert badge on rows where any score < threshold.
+
+---
+
+**API**
+
+```
+GET https://www.googleapis.com/pagespeedonline/v5/runPagespeed
+  ?url={URL}&strategy=mobile|desktop&key={KEY}
+```
+
+Extract per call: `lighthouseResult.categories` → performance, accessibility, best-practices, seo (× 100). Audits → `largest-contentful-paint`, `total-blocking-time`, `cumulative-layout-shift`, `first-contentful-paint` `.displayValue`.
+
+---
+
+**Queue engine**
+Sequential. 600ms delay with API key, 2000ms without. Each URL = 2 calls (mobile then desktop). Pause = hold before next call. Stop = cancel remaining. Progress updates after every call.
+
+---
+
+**Schedule (via localStorage + setInterval)**
+Settings panel (collapsible): frequency weekly / monthly, day picker, time window from–to. On page load check `localStorage` key `speedscan_schedule` — if a run is due, trigger automatically.
+
+---
+
+**Persistence (localStorage)**
+
+- `speedscan_results` — append each run, never overwrite, include timestamp + source (manual / scheduled)
+- `speedscan_urls` — master URL list
+- `speedscan_apikey` — API key
+- `speedscan_schedule` — schedule config + nextRunAt
+- `speedscan_threshold` — alert threshold (default 70)
+
+On page load: restore all saved data.
+
+---
+
+**Sort & filter**
+Click column header → sort asc/desc. Filter button → text input for URL keyword. "Latest only" toggle → show only most recent result per URL.
+
+---
+
+**Export**
+SheetJS from `https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js`. Export current filtered/sorted view to `.xlsx`. Filename: `pagespeed-YYYY-MM-DD.xlsx`.
+
+---

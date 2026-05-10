@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('/Users/mipham/Desktop/claude-project/tool-page-speed/speedscan.html','utf8'\\);console.log\\('size:',html.length,'bytes'\\);console.log\\('open tags:', \\(html.match\\(/<script/g\\)||[]\\).length, 'close:', \\(html.match\\(/<\\\\/script>/g\\)||[]\\).length\\);\")"
+    ]
+  }
+}

@@ -1,0 +1,1463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpeedScan — Bulk Google PageSpeed audit</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@fontsource/montserrat/400.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@fontsource/montserrat/500.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@fontsource/montserrat/600.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@fontsource/montserrat/700.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+      :root {
+        --bg: #f4f4f4;
+        --card: #ffffff;
+        --border: #e6e6e6;
+        --border-strong: #d4d4d4;
+        --row-border: #f0f0f0;
+        --text: #111827;
+        --muted: #6b7280;
+        --muted-2: #9ca3af;
+        --green: #16a34a;
+        --amber: #d97706;
+        --red: #dc2626;
+        --radius-card: 12px;
+        --radius-btn: 8px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Montserrat",
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 28px 20px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .hero {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 4px 4px;
+      }
+
+      /* ---------- Card ---------- */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 18px 20px;
+      }
+      .card-label {
+        text-transform: uppercase;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 1px;
+        margin-bottom: 14px;
+        display: block;
+      }
+
+      /* ---------- API key card ---------- */
+      .api-card .api-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 8px;
+        display: block;
+      }
+      /* ---------- Inputs ---------- */
+      input[type="text"],
+      input[type="password"],
+      input[type="date"],
+      input[type="time"],
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: var(--radius-btn);
+        padding: 11px 14px;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      input[type="text"],
+      input[type="password"] {
+        letter-spacing: 0.3px;
+      }
+      input:focus,
+      textarea:focus {
+        border-color: #999;
+      }
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      input[type="checkbox"] {
+        width: 17px;
+        height: 17px;
+        accent-color: var(--text);
+        cursor: pointer;
+        margin: 0;
+      }
+
+      /* ---------- Buttons ---------- */
+      .btn {
+        border: 1px solid var(--border-strong);
+        background: #fff;
+        color: var(--text);
+        border-radius: var(--radius-btn);
+        padding: 8px 16px;
+        font-family: inherit;
+        font-weight: 500;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+        line-height: 1.2;
+      }
+      .btn:hover {
+        background: #f9fafb;
+        border-color: #999;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn.primary {
+        background: var(--text);
+        color: #fff;
+        border-color: var(--text);
+      }
+      .btn.primary:hover {
+        background: #000;
+        border-color: #000;
+      }
+      .btn.danger:hover {
+        color: var(--red);
+        border-color: var(--red);
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* ---------- Pages card ---------- */
+      .pages-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .checklabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        user-select: none;
+      }
+      .url-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .url-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        background: #fff;
+        transition: opacity 0.15s;
+      }
+      .url-item.unchecked {
+        opacity: 0.45;
+      }
+      .url-item .u {
+        flex: 1;
+        font-size: 13px;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .url-item .del {
+        cursor: pointer;
+        color: var(--muted-2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        line-height: 1;
+        border: none;
+        background: none;
+        font-family: inherit;
+      }
+      .url-item .del:hover {
+        color: var(--red);
+      }
+      .url-empty {
+        padding: 18px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        background: #fafafa;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-btn);
+      }
+      .add-panel {
+        margin-top: 12px;
+        padding: 14px;
+        background: #fafafa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+      }
+      .add-panel .add-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      /* ---------- Schedule card ---------- */
+      .enable-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        margin-bottom: 14px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .schedule-fields {
+        transition: opacity 0.15s;
+      }
+      .schedule-fields.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .schedule-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+      .field-label {
+        display: block;
+        font-size: 13px;
+        color: var(--text);
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      .repeat-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .schedule-status {
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .schedule-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      /* ---------- Tabs ---------- */
+      .tabs {
+        display: flex;
+        gap: 24px;
+        border-bottom: 1px solid var(--border);
+        margin: -4px -4px 16px;
+        padding: 0 4px;
+      }
+      .tab {
+        background: none;
+        border: none;
+        padding: 10px 0;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted);
+        cursor: pointer;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        color: var(--text);
+        font-weight: 700;
+        border-bottom-color: var(--text);
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+
+      /* ---------- Results toolbar ---------- */
+      .results-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .columns-pop {
+        background: #fafafa;
+        border: 1px solid var(--row-border);
+        border-radius: var(--radius-btn);
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .columns-pop label {
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+
+      /* ---------- Table ---------- */
+      .table-wrap {
+        overflow-x: auto;
+        margin: 0 -4px;
+      }
+      table.results {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      table.results thead th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+        padding: 10px 14px;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--row-border);
+      }
+      table.results thead th .arrow {
+        color: var(--muted-2);
+        margin-left: 4px;
+        font-size: 11px;
+      }
+      table.results thead th.active .arrow {
+        color: var(--text);
+      }
+      table.results tbody td {
+        padding: 14px;
+        border-bottom: 1px solid var(--row-border);
+        vertical-align: middle;
+        color: var(--text);
+      }
+      table.results tbody tr:last-child td {
+        border-bottom: none;
+      }
+      td.col-page .pg-name {
+        font-weight: 500;
+      }
+      td.col-page .pg-url {
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        margin-top: 3px;
+        word-break: break-all;
+      }
+      td.col-date {
+        color: var(--text);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .score {
+        font-weight: 600;
+      }
+      .score.g {
+        color: var(--green);
+      }
+      .score.a {
+        color: var(--amber);
+      }
+      .score.r {
+        color: var(--red);
+      }
+      .metric {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .metric.g {
+        color: var(--green);
+      }
+      .metric.a {
+        color: var(--amber);
+      }
+      .metric.r {
+        color: var(--red);
+      }
+      .empty-cell {
+        padding: 32px;
+        text-align: center;
+        color: var(--muted);
+      }
+      .alert-badge {
+        display: inline-block;
+        background: #fee2e2;
+        color: var(--red);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        letter-spacing: 0.5px;
+      }
+
+      /* ---------- Progress card ---------- */
+      .progress-card .progress-title {
+        font-weight: 600;
+        color: var(--amber);
+        font-size: 14px;
+      }
+      .progress-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        gap: 10px;
+      }
+      .progress-meta {
+        font-size: 13px;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+      .strat {
+        background: #f3f4f6;
+        color: var(--text);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 4px;
+      }
+      .bar {
+        height: 6px;
+        background: #f1f1f1;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+      .bar-fill {
+        height: 100%;
+        background: var(--amber);
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+      .progress-bottom {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .progress-bottom .pct {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 600px) {
+        .schedule-row {
+          grid-template-columns: 1fr;
+        }
+        .pages-toolbar {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1 class="hero">SpeedScan</h1>
+
+      <!-- Card 1: API Key -->
+      <div class="card api-card">
+        <label class="api-label" for="api-key">API key</label>
+        <input
+          type="password"
+          id="api-key"
+          placeholder=""
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- Card 2: Pages -->
+      <div class="card">
+        <div class="card-label">PAGES</div>
+        <div class="pages-toolbar">
+          <label class="checklabel">
+            <input type="checkbox" id="select-all" />
+            Select all
+          </label>
+          <div class="btn-row">
+            <button class="btn" id="btn-add">+ Add</button>
+            <button class="btn primary" id="btn-check-now">Check now</button>
+          </div>
+        </div>
+        <div class="url-list" id="url-list"></div>
+        <div class="add-panel hidden" id="add-panel">
+          <textarea
+            id="urls-input"
+            placeholder="https://yoursite.com/&#10;https://yoursite.com/about&#10;https://yoursite.com/services"
+          ></textarea>
+          <div class="add-actions">
+            <button class="btn" id="btn-add-cancel">Cancel</button>
+            <button class="btn primary" id="btn-add-confirm">
+              Add to list
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress (hidden when idle) -->
+      <div class="card progress-card hidden" id="progress-card">
+        <div class="progress-top">
+          <div class="progress-title" id="progress-title">
+            Scanning in progress…
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="btn-pause">Pause</button>
+            <button class="btn danger" id="btn-stop">Stop</button>
+          </div>
+        </div>
+        <div class="progress-meta">
+          <span id="progress-url">—</span>
+          <span class="strat" id="progress-strat">MOBILE</span>
+          &nbsp;·&nbsp;
+          <span id="progress-count">0 of 0 pages</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+        <div class="progress-bottom">
+          <span id="progress-eta">Starting…</span>
+          <span class="pct" id="progress-pct">0%</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Schedule -->
+      <div class="card">
+        <div class="card-label">SCHEDULE</div>
+        <label class="enable-toggle">
+          <input type="checkbox" id="sched-enable" />
+          Enable schedule
+        </label>
+        <div class="schedule-fields disabled" id="schedule-fields">
+          <div class="schedule-row">
+            <div class="field">
+              <label class="field-label" for="sched-date">Date</label>
+              <input type="date" id="sched-date" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="sched-time">Time</label>
+              <input type="time" id="sched-time" value="20:30" />
+            </div>
+          </div>
+          <label class="repeat-toggle">
+            <input type="checkbox" id="sched-repeat" />
+            Repeat monthly
+          </label>
+          <div class="schedule-status" id="schedule-status">
+            No schedule active.
+          </div>
+          <div class="schedule-actions">
+            <button
+              class="btn"
+              id="btn-test-schedule"
+              title="Trigger a scheduled run right now (test)"
+            >
+              Test now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Results -->
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-tab="all" id="tab-all">
+            All results
+          </button>
+          <button class="tab" data-tab="quarterly" id="tab-quarterly">
+            Quarterly
+          </button>
+        </div>
+
+        <div class="results-toolbar">
+          <button class="btn" id="btn-columns">Columns</button>
+          <button class="btn" id="btn-export">↓ Export</button>
+          <button class="btn danger" id="btn-clear-results">Clear all</button>
+        </div>
+
+        <div class="columns-pop hidden" id="columns-pop"></div>
+
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr id="thead-row"></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* =====================================================================
+   SpeedScan — single-file PageSpeed bulk audit (redesign)
+   ===================================================================== */
+
+      const STORAGE = {
+        RESULTS: "speedscan_results",
+        URLS: "speedscan_urls",
+        APIKEY: "speedscan_apikey",
+        SCHEDULE: "speedscan_schedule",
+        THRESHOLD: "speedscan_threshold",
+        COLUMNS: "speedscan_columns",
+        TAB: "speedscan_tab",
+      };
+
+      const COLUMNS = [
+        { id: "page", label: "Page", always: true },
+        { id: "date", label: "Date", always: true },
+        { id: "mobile", label: "Mobile", type: "score", defaultVisible: true },
+        {
+          id: "desktop",
+          label: "Desktop",
+          type: "score",
+          defaultVisible: true,
+        },
+        { id: "accessibility", label: "Accessibility", type: "score" },
+        { id: "bestPractices", label: "Best Practices", type: "score" },
+        { id: "seo", label: "SEO", type: "score" },
+        { id: "lcp", label: "LCP", type: "metric" },
+        { id: "tbt", label: "TBT", type: "metric", defaultVisible: true },
+        { id: "cls", label: "CLS", type: "metric" },
+        { id: "fcp", label: "FCP", type: "metric" },
+      ];
+
+      const DEFAULT_VISIBLE = COLUMNS.filter(
+        (c) => c.always || c.defaultVisible,
+      ).map((c) => c.id);
+
+      /* ---------- State ---------- */
+      const state = {
+        apiKey: "",
+        urls: [],
+        results: [],
+        threshold: 70,
+        schedule: {
+          enabled: false,
+          date: "",
+          time: "20:30",
+          repeatMonthly: false,
+          nextRunAt: null,
+        },
+        visibleColumns: DEFAULT_VISIBLE.slice(),
+        sort: { col: "date", dir: "desc" },
+        tab: "all",
+        // queue runtime
+        running: false,
+        paused: false,
+        stopRequested: false,
+        queue: [],
+        queueIndex: 0,
+        queueTotal: 0,
+        startedAt: 0,
+        source: "manual",
+      };
+
+      /* ---------- Utils ---------- */
+      const $ = (id) => document.getElementById(id);
+      const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+      const load = (k, fb) => {
+        try {
+          const v = localStorage.getItem(k);
+          return v == null ? fb : JSON.parse(v);
+        } catch {
+          return fb;
+        }
+      };
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const escHtml = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const validUrl = (u) => {
+        try {
+          new URL(u);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const fmtDate = (ts) =>
+        new Date(ts).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      const fmtTime = (ts) =>
+        new Date(ts).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      const scoreClass = (s) =>
+        s == null ? "" : s >= 90 ? "g" : s >= 50 ? "a" : "r";
+      const quarterOf = (ts) => {
+        const d = new Date(ts);
+        return `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`;
+      };
+
+      /* ---------- Boot ---------- */
+      function boot() {
+        state.apiKey = load(STORAGE.APIKEY, "") || "";
+        state.urls = load(STORAGE.URLS, []) || [];
+        state.results = load(STORAGE.RESULTS, []) || [];
+        state.threshold = load(STORAGE.THRESHOLD, 70);
+        state.schedule = Object.assign(
+          state.schedule,
+          load(STORAGE.SCHEDULE, {}) || {},
+        );
+        state.visibleColumns =
+          load(STORAGE.COLUMNS, DEFAULT_VISIBLE) || DEFAULT_VISIBLE;
+        state.tab = load(STORAGE.TAB, "all") || "all";
+
+        $("api-key").value = state.apiKey;
+        $("sched-enable").checked = !!state.schedule.enabled;
+        $("sched-date").value = state.schedule.date || "";
+        $("sched-time").value = state.schedule.time || "20:30";
+        $("sched-repeat").checked = !!state.schedule.repeatMonthly;
+        applyScheduleEnabled();
+
+        buildColumnsPop();
+        buildHeader();
+        renderUrlList();
+        renderResults();
+        renderScheduleStatus();
+        setActiveTab(state.tab, false);
+        bindEvents();
+
+        checkScheduleDue();
+        setInterval(checkScheduleDue, 60_000);
+      }
+
+      /* ---------- URL list ---------- */
+      function renderUrlList() {
+        const wrap = $("url-list");
+        if (!state.urls.length) {
+          wrap.innerHTML =
+            '<div class="url-empty">No URLs yet — click + Add to add some.</div>';
+          syncSelectAll();
+          return;
+        }
+        wrap.innerHTML = state.urls
+          .map(
+            (u, idx) => `
+    <div class="url-item ${u.selected ? "" : "unchecked"}">
+      <input type="checkbox" data-idx="${idx}" ${u.selected ? "checked" : ""} />
+      <span class="u" title="${escHtml(u.url)}">${escHtml(u.url)}</span>
+      <button class="del" data-del="${idx}" title="Remove">×</button>
+    </div>
+  `,
+          )
+          .join("");
+        wrap.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.addEventListener("change", (e) => {
+            const i = +e.target.dataset.idx;
+            state.urls[i].selected = e.target.checked;
+            save(STORAGE.URLS, state.urls);
+            renderUrlList();
+          });
+        });
+        wrap.querySelectorAll("[data-del]").forEach((el) => {
+          el.addEventListener("click", (e) => {
+            const i = +e.currentTarget.dataset.del;
+            state.urls.splice(i, 1);
+            save(STORAGE.URLS, state.urls);
+            renderUrlList();
+          });
+        });
+        syncSelectAll();
+      }
+
+      function syncSelectAll() {
+        const cb = $("select-all");
+        if (!state.urls.length) {
+          cb.checked = false;
+          cb.indeterminate = false;
+          return;
+        }
+        const sel = state.urls.filter((u) => u.selected).length;
+        cb.checked = sel === state.urls.length;
+        cb.indeterminate = sel > 0 && sel < state.urls.length;
+      }
+
+      function addUrlsFromTextarea() {
+        const raw = $("urls-input")
+          .value.split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        let added = 0;
+        raw.forEach((u) => {
+          let url = u;
+          if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+          if (!validUrl(url)) return;
+          if (state.urls.find((x) => x.url === url)) return;
+          state.urls.push({ url, selected: true });
+          added++;
+        });
+        save(STORAGE.URLS, state.urls);
+        renderUrlList();
+        if (added) {
+          $("urls-input").value = "";
+          $("add-panel").classList.add("hidden");
+        } else if (raw.length) {
+          alert("No new valid URLs to add (already in list or malformed).");
+        }
+      }
+
+      /* ---------- Columns popover ---------- */
+      function buildColumnsPop() {
+        const pop = $("columns-pop");
+        pop.innerHTML = COLUMNS.map(
+          (c) => `
+    <label>
+      <input type="checkbox" data-col="${c.id}" ${state.visibleColumns.includes(c.id) ? "checked" : ""} ${c.always ? "disabled" : ""}/>
+      ${c.label}
+    </label>
+  `,
+        ).join("");
+        pop.querySelectorAll("input").forEach((cb) => {
+          cb.addEventListener("change", (e) => {
+            const id = e.target.dataset.col;
+            if (e.target.checked) {
+              if (!state.visibleColumns.includes(id))
+                state.visibleColumns.push(id);
+            } else {
+              state.visibleColumns = state.visibleColumns.filter(
+                (x) => x !== id,
+              );
+            }
+            save(STORAGE.COLUMNS, state.visibleColumns);
+            buildHeader();
+            renderResults();
+          });
+        });
+      }
+
+      function buildHeader() {
+        const tr = $("thead-row");
+        tr.innerHTML = COLUMNS.filter((c) =>
+          state.visibleColumns.includes(c.id),
+        )
+          .map((c) => {
+            const active = state.sort.col === c.id;
+            const arrow = active ? (state.sort.dir === "asc" ? "↑" : "↓") : "↕";
+            return `<th class="${active ? "active" : ""}" data-col="${c.id}">${c.label}<span class="arrow">${arrow}</span></th>`;
+          })
+          .join("");
+        tr.querySelectorAll("th").forEach((th) => {
+          th.addEventListener("click", () => {
+            const col = th.dataset.col;
+            if (state.sort.col === col) {
+              state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc";
+            } else {
+              state.sort.col = col;
+              state.sort.dir = "desc";
+            }
+            buildHeader();
+            renderResults();
+          });
+        });
+      }
+
+      /* ---------- Results data ---------- */
+      function parseMetric(v) {
+        if (v == null) return -1;
+        const m = String(v).match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : -1;
+      }
+
+      function pageName(url) {
+        try {
+          const u = new URL(url);
+          return u.host;
+        } catch {
+          return url;
+        }
+      }
+
+      function shortUrl(url) {
+        try {
+          const u = new URL(url);
+          return (u.host + u.pathname).replace(/\/$/, "");
+        } catch {
+          return url;
+        }
+      }
+
+      function getRowsForTab() {
+        if (state.tab === "all") return state.results.slice();
+        // Quarterly: latest result per URL per quarter
+        const keyed = new Map();
+        state.results.forEach((r) => {
+          const key = r.url + "|" + quarterOf(r.ts);
+          if (!keyed.has(key) || keyed.get(key).ts < r.ts)
+            keyed.set(key, { ...r, _quarter: quarterOf(r.ts) });
+        });
+        return Array.from(keyed.values());
+      }
+
+      function getFilteredResults() {
+        let rows = getRowsForTab();
+        const { col, dir } = state.sort;
+        rows.sort((a, b) => {
+          let av, bv;
+          if (col === "page") {
+            av = a.url.toLowerCase();
+            bv = b.url.toLowerCase();
+          } else if (col === "date") {
+            av = a.ts;
+            bv = b.ts;
+          } else if (["lcp", "tbt", "cls", "fcp"].includes(col)) {
+            av = parseMetric(a[col]);
+            bv = parseMetric(b[col]);
+          } else {
+            av = a[col] ?? -1;
+            bv = b[col] ?? -1;
+          }
+          if (av < bv) return dir === "asc" ? -1 : 1;
+          if (av > bv) return dir === "asc" ? 1 : -1;
+          return 0;
+        });
+        return rows;
+      }
+
+      function metricGrade(col, v) {
+        if (v == null) return null;
+        const num = parseFloat(String(v).replace(/[^\d.]/g, ""));
+        if (isNaN(num)) return null;
+        const isMs = /ms\b/i.test(v);
+        const isS = /\bs\b/i.test(v) && !isMs;
+        const seconds = isMs ? num / 1000 : num;
+        switch (col) {
+          case "lcp":
+            return seconds <= 2.5 ? "g" : seconds <= 4 ? "a" : "r";
+          case "fcp":
+            return seconds <= 1.8 ? "g" : seconds <= 3 ? "a" : "r";
+          case "tbt": {
+            const ms = isS ? num * 1000 : num;
+            return ms <= 200 ? "g" : ms <= 600 ? "a" : "r";
+          }
+          case "cls":
+            return num <= 0.1 ? "g" : num <= 0.25 ? "a" : "r";
+          default:
+            return null;
+        }
+      }
+
+      function renderCell(col, r) {
+        if (col === "page") {
+          return `<td class="col-page">
+      <div class="pg-name">${escHtml(pageName(r.url))}${r.alert ? '<span class="alert-badge">ALERT</span>' : ""}</div>
+    </td>`;
+        }
+        if (col === "date") {
+          if (state.tab === "quarterly") {
+            return `<td class="col-date">${escHtml(r._quarter || quarterOf(r.ts))}</td>`;
+          }
+          return `<td class="col-date">${fmtDate(r.ts)}</td>`;
+        }
+        const meta = COLUMNS.find((c) => c.id === col);
+        const v = r[col];
+        if (meta?.type === "score") {
+          if (v == null) return '<td class="metric">—</td>';
+          return `<td><span class="score ${scoreClass(v)}">${Math.round(v)}</span></td>`;
+        }
+        if (meta?.type === "metric") {
+          if (v == null) return '<td class="metric">—</td>';
+          const g = metricGrade(col, v);
+          return `<td><span class="metric ${g || ""}">${escHtml(v)}</span></td>`;
+        }
+        return `<td>${escHtml(v ?? "")}</td>`;
+      }
+
+      function renderResults() {
+        const tbody = $("tbody");
+        const rows = getFilteredResults();
+        const visible = COLUMNS.filter((c) =>
+          state.visibleColumns.includes(c.id),
+        );
+        if (!rows.length) {
+          tbody.innerHTML = `<tr><td class="empty-cell" colspan="${visible.length || 5}">No results yet — run an audit to populate the table.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = rows
+          .map(
+            (r) =>
+              "<tr>" +
+              visible.map((c) => renderCell(c.id, r)).join("") +
+              "</tr>",
+          )
+          .join("");
+      }
+
+      /* ---------- Tabs ---------- */
+      function setActiveTab(tab, persist = true) {
+        state.tab = tab;
+        $("tab-all").classList.toggle("active", tab === "all");
+        $("tab-quarterly").classList.toggle("active", tab === "quarterly");
+        if (persist) save(STORAGE.TAB, tab);
+        renderResults();
+      }
+
+      /* ---------- API call ---------- */
+      async function fetchPSI(url, strategy, key) {
+        const params = new URLSearchParams({ url, strategy });
+        if (key) params.set("key", key);
+        ["performance", "accessibility", "best-practices", "seo"].forEach((c) =>
+          params.append("category", c),
+        );
+        const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`;
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          let msg = `HTTP ${res.status}`;
+          try {
+            const j = await res.json();
+            msg = j.error?.message || msg;
+          } catch {}
+          throw new Error(msg);
+        }
+        return res.json();
+      }
+
+      function extractMetrics(json, strategy) {
+        const cats = json?.lighthouseResult?.categories || {};
+        const audits = json?.lighthouseResult?.audits || {};
+        return {
+          [strategy]: cats.performance
+            ? Math.round(cats.performance.score * 100)
+            : null,
+          accessibility: cats.accessibility
+            ? Math.round(cats.accessibility.score * 100)
+            : null,
+          bestPractices: cats["best-practices"]
+            ? Math.round(cats["best-practices"].score * 100)
+            : null,
+          seo: cats.seo ? Math.round(cats.seo.score * 100) : null,
+          lcp: audits["largest-contentful-paint"]?.displayValue || null,
+          tbt: audits["total-blocking-time"]?.displayValue || null,
+          cls: audits["cumulative-layout-shift"]?.displayValue || null,
+          fcp: audits["first-contentful-paint"]?.displayValue || null,
+        };
+      }
+
+      /* ---------- Queue engine ---------- */
+      async function runAudit(source = "manual") {
+        if (state.running) return;
+        const selected = state.urls.filter((u) => u.selected);
+        if (!selected.length) {
+          alert("Please add and select at least one URL.");
+          return;
+        }
+        state.apiKey = $("api-key").value.trim();
+        save(STORAGE.APIKEY, state.apiKey);
+
+        state.queue = [];
+        selected.forEach((u) => {
+          state.queue.push({ url: u.url, strategy: "mobile" });
+          state.queue.push({ url: u.url, strategy: "desktop" });
+        });
+        state.queueTotal = state.queue.length;
+        state.queueIndex = 0;
+        state.running = true;
+        state.paused = false;
+        state.stopRequested = false;
+        state.startedAt = Date.now();
+        state.source = source;
+
+        $("progress-card").classList.remove("hidden");
+        $("btn-check-now").disabled = true;
+        $("btn-pause").textContent = "Pause";
+
+        const perUrl = {};
+
+        try {
+          while (state.queueIndex < state.queue.length) {
+            if (state.stopRequested) break;
+            while (state.paused && !state.stopRequested) await sleep(250);
+            if (state.stopRequested) break;
+
+            const { url, strategy } = state.queue[state.queueIndex];
+            updateProgress(url, strategy);
+
+            try {
+              const json = await fetchPSI(url, strategy, state.apiKey);
+              const metrics = extractMetrics(json, strategy);
+              if (!perUrl[url]) perUrl[url] = { url, ts: Date.now(), source };
+              Object.assign(perUrl[url], metrics);
+            } catch (err) {
+              console.warn("PSI failed", url, strategy, err);
+              if (!perUrl[url]) perUrl[url] = { url, ts: Date.now(), source };
+              perUrl[url][strategy] = null;
+            }
+
+            state.queueIndex++;
+            // commit completed records
+            Object.values(perUrl)
+              .filter((r) => "mobile" in r && "desktop" in r && !r._committed)
+              .forEach((r) => {
+                r._committed = true;
+                const rec = { ...r };
+                delete rec._committed;
+                rec.alert = computeAlert(rec);
+                state.results.push(rec);
+                save(STORAGE.RESULTS, state.results);
+              });
+            renderResults();
+
+            if (state.queueIndex < state.queue.length) {
+              await sleep(state.apiKey ? 600 : 2000);
+            }
+          }
+        } finally {
+          state.running = false;
+          state.paused = false;
+          $("btn-check-now").disabled = false;
+          $("progress-card").classList.add("hidden");
+
+          if (source === "scheduled" && state.schedule.enabled) {
+            if (state.schedule.repeatMonthly) {
+              state.schedule.nextRunAt = computeNextRunAt(state.schedule);
+            } else {
+              state.schedule.nextRunAt = null;
+            }
+            save(STORAGE.SCHEDULE, state.schedule);
+            renderScheduleStatus();
+          }
+        }
+      }
+
+      function computeAlert(rec) {
+        const t = state.threshold;
+        return [
+          "mobile",
+          "desktop",
+          "accessibility",
+          "bestPractices",
+          "seo",
+        ].some((k) => rec[k] != null && rec[k] < t);
+      }
+
+      function updateProgress(url, strategy) {
+        const idx = state.queueIndex;
+        const total = state.queueTotal;
+        const pages = Math.ceil(total / 2);
+        const pageNum = Math.floor(idx / 2) + 1;
+        const pct = Math.round((idx / total) * 100);
+        $("progress-url").textContent = shortUrl(url);
+        $("progress-strat").textContent = strategy.toUpperCase();
+        $("progress-count").textContent = `${pageNum} of ${pages} pages`;
+        $("bar-fill").style.width = pct + "%";
+        $("progress-pct").textContent = pct + "%";
+
+        const elapsed = Date.now() - state.startedAt;
+        if (idx > 0) {
+          const remainingMs = (elapsed / idx) * (total - idx);
+          const min = Math.round(remainingMs / 60000);
+          const sec = Math.round(remainingMs / 1000);
+          $("progress-eta").textContent =
+            min >= 1 ? `~${min} min remaining` : `~${sec}s remaining`;
+        } else {
+          $("progress-eta").textContent = "Starting…";
+        }
+      }
+
+      /* ---------- Schedule ---------- */
+      function applyScheduleEnabled() {
+        const en = !!state.schedule.enabled;
+        $("schedule-fields").classList.toggle("disabled", !en);
+      }
+
+      function computeNextRunAt(s) {
+        if (!s || !s.date) return null;
+        const [y, mo, d] = s.date.split("-").map(Number);
+        const [hh, mm] = (s.time || "20:30").split(":").map(Number);
+        let next = new Date(y, mo - 1, d, hh, mm, 0, 0);
+        if (s.repeatMonthly) {
+          const now = new Date();
+          while (next <= now) {
+            next = new Date(
+              next.getFullYear(),
+              next.getMonth() + 1,
+              d,
+              hh,
+              mm,
+              0,
+              0,
+            );
+          }
+        }
+        return next.getTime();
+      }
+
+      const SCHED_TOLERANCE_MS = 60 * 60 * 1000;
+
+      function checkScheduleDue() {
+        const s = state.schedule;
+        if (!s || !s.enabled || !s.date) return;
+        if (state.running) return;
+
+        if (!s.nextRunAt) {
+          s.nextRunAt = computeNextRunAt(s);
+          save(STORAGE.SCHEDULE, s);
+          renderScheduleStatus();
+        }
+        const now = Date.now();
+        if (!s.nextRunAt) return;
+
+        if (now >= s.nextRunAt && now - s.nextRunAt <= SCHED_TOLERANCE_MS) {
+          if (state.urls.some((u) => u.selected)) {
+            runAudit("scheduled");
+          } else if (s.repeatMonthly) {
+            s.nextRunAt = computeNextRunAt(s);
+            save(STORAGE.SCHEDULE, s);
+            renderScheduleStatus();
+          }
+        } else if (now > s.nextRunAt + SCHED_TOLERANCE_MS) {
+          if (s.repeatMonthly) {
+            s.nextRunAt = computeNextRunAt(s);
+          } else {
+            s.nextRunAt = null;
+          }
+          save(STORAGE.SCHEDULE, s);
+          renderScheduleStatus();
+        }
+      }
+
+      function renderScheduleStatus() {
+        const el = $("schedule-status");
+        const s = state.schedule;
+        if (!s || !s.enabled) {
+          el.textContent = "No schedule active.";
+          return;
+        }
+        if (!s.date) {
+          el.textContent = "Pick a date to activate.";
+          return;
+        }
+        const next = s.nextRunAt ? new Date(s.nextRunAt) : null;
+        const repeat = s.repeatMonthly ? "repeats monthly" : "one-time";
+        el.textContent = next
+          ? `Next run: ${next.toLocaleString()} (${repeat})`
+          : `Schedule set (${repeat})`;
+      }
+
+      function saveScheduleFromUI() {
+        state.schedule.enabled = $("sched-enable").checked;
+        state.schedule.date = $("sched-date").value;
+        state.schedule.time = $("sched-time").value;
+        state.schedule.repeatMonthly = $("sched-repeat").checked;
+        state.schedule.nextRunAt = state.schedule.enabled
+          ? computeNextRunAt(state.schedule)
+          : null;
+        save(STORAGE.SCHEDULE, state.schedule);
+        applyScheduleEnabled();
+        renderScheduleStatus();
+      }
+
+      /* ---------- Export ---------- */
+      function exportXlsx() {
+        const rows = getFilteredResults();
+        if (!rows.length) {
+          alert("Nothing to export.");
+          return;
+        }
+        const visible = COLUMNS.filter((c) =>
+          state.visibleColumns.includes(c.id),
+        );
+        const data = rows.map((r) => {
+          const o = {};
+          visible.forEach((c) => {
+            if (c.id === "page") o.PAGE = r.url;
+            else if (c.id === "date")
+              o.DATE =
+                state.tab === "quarterly"
+                  ? r._quarter || quarterOf(r.ts)
+                  : new Date(r.ts).toISOString();
+            else o[c.label] = r[c.id] ?? "";
+          });
+          o.SOURCE = r.source || "manual";
+          o.ALERT = r.alert ? "YES" : "";
+          return o;
+        });
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "PageSpeed");
+        const d = new Date();
+        const fname = `pagespeed-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}.xlsx`;
+        XLSX.writeFile(wb, fname);
+      }
+
+      /* ---------- Events ---------- */
+      function bindEvents() {
+        // API key
+        $("api-key").addEventListener("change", (e) => {
+          state.apiKey = e.target.value.trim();
+          save(STORAGE.APIKEY, state.apiKey);
+        });
+
+        // Pages
+        $("select-all").addEventListener("change", (e) => {
+          const v = e.target.checked;
+          state.urls.forEach((u) => (u.selected = v));
+          save(STORAGE.URLS, state.urls);
+          renderUrlList();
+        });
+        $("btn-add").addEventListener("click", () => {
+          $("add-panel").classList.toggle("hidden");
+          if (!$("add-panel").classList.contains("hidden"))
+            $("urls-input").focus();
+        });
+        $("btn-add-cancel").addEventListener("click", () => {
+          $("add-panel").classList.add("hidden");
+          $("urls-input").value = "";
+        });
+        $("btn-add-confirm").addEventListener("click", addUrlsFromTextarea);
+        $("btn-check-now").addEventListener("click", () => runAudit("manual"));
+
+        // Progress
+        $("btn-pause").addEventListener("click", () => {
+          if (!state.running) return;
+          state.paused = !state.paused;
+          $("btn-pause").textContent = state.paused ? "Resume" : "Pause";
+          $("progress-title").textContent = state.paused
+            ? "Paused"
+            : "Scanning in progress…";
+        });
+        $("btn-stop").addEventListener("click", () => {
+          if (!state.running) return;
+          if (
+            confirm(
+              "Stop the current scan? Already-completed URLs will be saved.",
+            )
+          ) {
+            state.stopRequested = true;
+            state.paused = false;
+          }
+        });
+
+        // Schedule
+        $("sched-enable").addEventListener("change", saveScheduleFromUI);
+        $("sched-date").addEventListener("change", saveScheduleFromUI);
+        $("sched-time").addEventListener("change", saveScheduleFromUI);
+        $("sched-repeat").addEventListener("change", saveScheduleFromUI);
+        $("btn-test-schedule").addEventListener("click", () => {
+          if (state.running) {
+            alert("A scan is already running.");
+            return;
+          }
+          if (!state.urls.some((u) => u.selected)) {
+            alert("Add and select at least one URL first.");
+            return;
+          }
+          runAudit("scheduled");
+        });
+
+        // Tabs
+        $("tab-all").addEventListener("click", () => setActiveTab("all"));
+        $("tab-quarterly").addEventListener("click", () =>
+          setActiveTab("quarterly"),
+        );
+
+        // Results toolbar
+        $("btn-columns").addEventListener("click", () =>
+          $("columns-pop").classList.toggle("hidden"),
+        );
+        $("btn-export").addEventListener("click", exportXlsx);
+        $("btn-clear-results").addEventListener("click", () => {
+          if (confirm("Delete all saved results? This cannot be undone.")) {
+            state.results = [];
+            save(STORAGE.RESULTS, state.results);
+            renderResults();
+          }
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", boot);
+    </script>
+  </body>
+</html>
